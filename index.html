@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AirSpy HF+ and HF+ Discovery: A Technical Analysis of a High-Performance HF SDR Receiver</title>
+<style>
+  :root {
+    --accent: #1a6fa8;
+    --accent2: #0d4a72;
+    --bg: #f9f9f9;
+    --card: #ffffff;
+    --text: #1a1a1a;
+    --muted: #555;
+    --border: #ddd;
+    --code-bg: #f0f4f8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Georgia', serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+  }
+  header {
+    background: linear-gradient(135deg, var(--accent2) 0%, var(--accent) 100%);
+    color: white;
+    padding: 48px 40px 36px;
+    text-align: center;
+  }
+  header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.3;
+    max-width: 900px;
+    margin: 0 auto 16px;
+  }
+  header .subtitle {
+    font-size: 1rem;
+    opacity: 0.85;
+    font-style: italic;
+    margin-bottom: 12px;
+  }
+  header .meta {
+    font-size: 0.85rem;
+    opacity: 0.7;
+    font-family: sans-serif;
+  }
+  .toc-nav {
+    background: var(--accent2);
+    color: white;
+    padding: 12px 40px;
+    font-family: sans-serif;
+    font-size: 0.82rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+  }
+  .toc-nav a { color: #90c8f0; text-decoration: none; }
+  .toc-nav a:hover { color: white; text-decoration: underline; }
+  main {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 40px 32px 80px;
+  }
+  section { margin-bottom: 52px; }
+  h2 {
+    font-size: 1.5rem;
+    color: var(--accent2);
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 6px;
+    margin-bottom: 18px;
+    margin-top: 40px;
+    font-family: sans-serif;
+  }
+  h3 {
+    font-size: 1.1rem;
+    color: var(--accent);
+    margin: 24px 0 10px;
+    font-family: sans-serif;
+  }
+  h4 {
+    font-size: 0.98rem;
+    color: var(--accent2);
+    margin: 18px 0 8px;
+    font-family: sans-serif;
+    font-weight: 600;
+  }
+  p { margin-bottom: 14px; }
+  .abstract {
+    background: var(--card);
+    border-left: 4px solid var(--accent);
+    padding: 20px 24px;
+    margin-bottom: 36px;
+    border-radius: 0 6px 6px 0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .abstract h2 { margin-top: 0; border-bottom: none; font-size: 1.1rem; }
+  .hypothesis {
+    background: #fffbea;
+    border: 1px solid #e8c900;
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 0.93rem;
+  }
+  .hypothesis::before {
+    content: "⚗ Hypothesis / Engineering Inference: ";
+    font-weight: bold;
+    color: #7a6000;
+    font-family: sans-serif;
+  }
+  .note {
+    background: #eef6ff;
+    border: 1px solid #9dc8f0;
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 0.93rem;
+  }
+  .note::before {
+    content: "ℹ Note: ";
+    font-weight: bold;
+    color: var(--accent2);
+    font-family: sans-serif;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-family: sans-serif;
+    font-size: 0.9rem;
+  }
+  th {
+    background: var(--accent2);
+    color: white;
+    padding: 10px 14px;
+    text-align: left;
+  }
+  td { padding: 9px 14px; border-bottom: 1px solid var(--border); }
+  tr:nth-child(even) td { background: #f0f6fd; }
+  .figure {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 24px 0;
+    text-align: center;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+  }
+  .figure figcaption {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: 12px;
+    font-family: sans-serif;
+    font-style: italic;
+  }
+  .math {
+    font-family: 'Courier New', monospace;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 18px;
+    margin: 16px 0;
+    overflow-x: auto;
+    font-size: 0.95rem;
+  }
+  .refs ol { padding-left: 24px; }
+  .refs li { margin-bottom: 8px; font-size: 0.88rem; color: var(--muted); }
+  .refs a { color: var(--accent); }
+  .spec-badge {
+    display: inline-block;
+    background: var(--accent);
+    color: white;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-family: sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin: 0 4px;
+  }
+  .col2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 680px) { .col2 { grid-template-columns: 1fr; } }
+  svg text { font-family: sans-serif; }
+  .improvement {
+    background: #f0fff4;
+    border: 1px solid #68d391;
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 0.93rem;
+  }
+  .improvement::before {
+    content: "▲ Potential Improvement: ";
+    font-weight: bold;
+    color: #276749;
+    font-family: sans-serif;
+  }
+  .download-bar {
+    background: #0d4a72;
+    padding: 10px 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .download-bar span {
+    color: #90c8f0;
+    font-family: sans-serif;
+    font-size: 0.88rem;
+  }
+  .btn-dl {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #e67e22;
+    color: white;
+    font-family: sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 9px 22px;
+    border-radius: 6px;
+    text-decoration: none;
+    letter-spacing: 0.02em;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    transition: background 0.15s;
+  }
+  .btn-dl:hover { background: #d35400; }
+  .btn-dl svg { flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>AirSpy HF+ and HF+ Discovery:<br>A Technical Analysis of a High-Performance Software-Defined HF/VHF Receiver</h1>
+  <div class="subtitle">Architecture, Signal Chain Design, Dynamic Range, and the Engineering Trade-offs Behind Best-in-Class Performance</div>
+  <div class="meta">Technical Paper &mdash; April 2026 &mdash; SDR Engineering Analysis</div>
+</header>
+
+<div class="download-bar">
+  <span>Download the full technical paper as a PDF document:</span>
+  <a class="btn-dl" href="/HFplus_Technical_Paper.pdf" download="AirSpy_HFplus_Technical_Paper.pdf">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/>
+      <line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+    Download PDF
+  </a>
+  <span style="opacity:0.6; font-size:0.8rem;">AirSpy_HFplus_Technical_Paper.pdf</span>
+</div>
+<nav class="toc-nav">
+  <a href="#abstract">Abstract</a>
+  <a href="#introduction">1. Introduction</a>
+  <a href="#architecture">2. System Architecture</a>
+  <a href="#filters">3. Filter Bank</a>
+  <a href="#vga">4. VGA Stage</a>
+  <a href="#lna">5. LNA</a>
+  <a href="#mixer">6. PHR Mixer &amp; IF</a>
+  <a href="#sigma-delta">7. Sigma-Delta ADC</a>
+  <a href="#decimation">8. Decimation &amp; IQ</a>
+  <a href="#performance">9. Performance</a>
+  <a href="#improvements">10. Improvements</a>
+  <a href="#conclusion">11. Conclusion</a>
+  <a href="#references">References</a>
+</nav>
+
+<main>
+
+<!-- ABSTRACT -->
+<section id="abstract">
+<div class="abstract">
+<h2>Abstract</h2>
+<p>The AirSpy HF+ and its successor, the HF+ Discovery, represent a significant advance in low-cost, high-performance software-defined radio (SDR) receiver design for the HF and lower VHF spectrum. By combining a selectable bandpass preselector filter bank, a multi-stage automatic gain control (AGC) architecture employing both active variable gain amplification and passive attenuation, a low-noise amplifier (LNA) delivering approximately 20 dB of gain, a polyphase harmonic rejection (PHR) mixer operating at a low intermediate frequency (IF) to eliminate DC spur problems, a fourth-order multi-bit sigma-delta (&Sigma;&Delta;) analogue-to-digital converter providing up to 24-bit equivalent analogue resolution decimated to 18-bit output, and a cascaded CIC/FIR decimation chain delivering 2&times;16-bit IQ output at 768 kSps, these receivers achieve a blocking dynamic range of 110 dB on HF&mdash;a figure that was unprecedented for consumer-grade SDR hardware at the time of their release. This paper examines each stage of the signal chain in technical depth, discusses the engineering trade-offs made, identifies potential improvements, and situates the design within the broader context of high-performance HF receiver architecture.</p>
+</div>
+</section>
+
+<!-- 1. INTRODUCTION -->
+<section id="introduction">
+<h2>1. Introduction</h2>
+<p>Software-defined radio has democratised spectrum monitoring, amateur radio experimentation, and signals intelligence research. However, for many years the dominant low-cost SDR platform&mdash;the RTL-SDR dongle based on the Rafael Micro R820T or similar chip&mdash;suffered from a dynamic range of only 50&ndash;60 dB, rendering it largely unsuitable for serious HF work in the presence of strong broadcast stations.</p>
+<p>AirSpy, in collaboration with STMicroelectronics, addressed this limitation with the HF+ (released 2017) and the HF+ Discovery (released 2019). The key insight was that the core performance bottleneck was not the digital processing, but the analogue front-end: noise figure, linearity, and the quality of the analogue-to-digital conversion. By leveraging the STMicroelectronics STA709&mdash;an automotive-grade digital tuner IC featuring dual high-dynamic-range sigma-delta ADCs and an integrated polyphase harmonic rejection mixer&mdash;the AirSpy team was able to achieve a Minimum Detectable Signal (MDS) of &minus;140 dBm and a blocking dynamic range of 110 dB on HF frequencies.</p>
+<p>This paper proceeds through each stage of the signal path from antenna to USB host, examining the engineering rationale, the measured performance, and where further improvements could theoretically be made.</p>
+</section>
+
+<!-- 2. SYSTEM ARCHITECTURE -->
+<section id="architecture">
+<h2>2. System Architecture Overview</h2>
+<p>The HF+ and HF+ Discovery share a fundamentally similar architecture. The signal path can be summarised as:</p>
+
+<div class="figure">
+<svg width="900" height="220" viewBox="0 0 900 220" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="900" height="220" fill="#f8fafc" rx="8"/>
+
+  <!-- Arrow helper macro — drawn manually -->
+  <!-- Blocks -->
+  <!-- ANT -->
+  <rect x="10" y="80" width="70" height="50" rx="6" fill="#1a6fa8" stroke="#0d4a72" stroke-width="1.5"/>
+  <text x="45" y="102" text-anchor="middle" fill="white" font-size="11" font-weight="bold">ANT</text>
+  <text x="45" y="116" text-anchor="middle" fill="white" font-size="9">Input</text>
+
+  <!-- Arrow -->
+  <line x1="80" y1="105" x2="100" y2="105" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Filter Bank -->
+  <rect x="100" y="72" width="90" height="66" rx="6" fill="#2980b9" stroke="#1a6fa8" stroke-width="1.5"/>
+  <text x="145" y="97" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Filter</text>
+  <text x="145" y="111" text-anchor="middle" fill="white" font-size="10">Bank</text>
+  <text x="145" y="125" text-anchor="middle" fill="white" font-size="9">4 BPF bands</text>
+
+  <line x1="190" y1="105" x2="210" y2="105" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- VGA/Attenuator -->
+  <rect x="210" y="72" width="90" height="66" rx="6" fill="#16a085" stroke="#0e7060" stroke-width="1.5"/>
+  <text x="255" y="97" text-anchor="middle" fill="white" font-size="11" font-weight="bold">VGA /</text>
+  <text x="255" y="111" text-anchor="middle" fill="white" font-size="10">Attenuator</text>
+  <text x="255" y="125" text-anchor="middle" fill="white" font-size="9">0–15 dB ctrl</text>
+
+  <line x1="300" y1="105" x2="320" y2="105" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- LNA -->
+  <rect x="320" y="72" width="80" height="66" rx="6" fill="#8e44ad" stroke="#6c3483" stroke-width="1.5"/>
+  <text x="360" y="97" text-anchor="middle" fill="white" font-size="11" font-weight="bold">LNA</text>
+  <text x="360" y="111" text-anchor="middle" fill="white" font-size="10">~20 dB gain</text>
+  <text x="360" y="125" text-anchor="middle" fill="white" font-size="9">NF ~0.75 dB</text>
+
+  <line x1="400" y1="105" x2="420" y2="105" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- PHR Mixer -->
+  <rect x="420" y="72" width="90" height="66" rx="6" fill="#c0392b" stroke="#922b21" stroke-width="1.5"/>
+  <text x="465" y="94" text-anchor="middle" fill="white" font-size="11" font-weight="bold">PHR</text>
+  <text x="465" y="108" text-anchor="middle" fill="white" font-size="10">Mixer</text>
+  <text x="465" y="122" text-anchor="middle" fill="white" font-size="9">21st harmonic</text>
+  <text x="465" y="134" text-anchor="middle" fill="white" font-size="9">rejection</text>
+
+  <line x1="510" y1="105" x2="530" y2="105" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Sigma-Delta ADC -->
+  <rect x="530" y="65" width="100" height="80" rx="6" fill="#d35400" stroke="#a04000" stroke-width="1.5"/>
+  <text x="580" y="90" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Σ&Delta; ADC</text>
+  <text x="580" y="104" text-anchor="middle" fill="white" font-size="9">4th-order</text>
+  <text x="580" y="117" text-anchor="middle" fill="white" font-size="9">36 MSPS</text>
+  <text x="580" y="130" text-anchor="middle" fill="white" font-size="9">24-bit analog</text>
+
+  <line x1="630" y1="105" x2="650" y2="105" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Decimation -->
+  <rect x="650" y="72" width="90" height="66" rx="6" fill="#27ae60" stroke="#1e8449" stroke-width="1.5"/>
+  <text x="695" y="97" text-anchor="middle" fill="white" font-size="11" font-weight="bold">CIC/FIR</text>
+  <text x="695" y="111" text-anchor="middle" fill="white" font-size="10">Decimation</text>
+  <text x="695" y="125" text-anchor="middle" fill="white" font-size="9">→ 18-bit</text>
+
+  <line x1="740" y1="105" x2="760" y2="105" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- IQ Output -->
+  <rect x="760" y="72" width="90" height="66" rx="6" fill="#1a6fa8" stroke="#0d4a72" stroke-width="1.5"/>
+  <text x="805" y="97" text-anchor="middle" fill="white" font-size="11" font-weight="bold">IQ Out</text>
+  <text x="805" y="111" text-anchor="middle" fill="white" font-size="10">2×16-bit</text>
+  <text x="805" y="125" text-anchor="middle" fill="white" font-size="9">768 kSps USB</text>
+
+  <!-- AGC feedback arrow -->
+  <path d="M 805 138 Q 805 185 530 185 Q 255 185 255 138" fill="none" stroke="#e67e22" stroke-width="1.8" stroke-dasharray="6,4" marker-end="url(#arr2)"/>
+  <text x="530" y="200" text-anchor="middle" fill="#e67e22" font-size="10" font-style="italic">Multi-stage AGC feedback loop (analog + digital)</text>
+
+  <!-- IF offset label -->
+  <text x="465" y="20" text-anchor="middle" fill="#c0392b" font-size="10" font-style="italic">Low-IF offset (avoids DC spur)</text>
+  <line x1="465" y1="25" x2="465" y2="70" stroke="#c0392b" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <!-- STA709 brace -->
+  <rect x="418" y="155" width="284" height="22" rx="4" fill="none" stroke="#888" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="560" y="170" text-anchor="middle" fill="#666" font-size="10">STA709 (STMicroelectronics) Integrated</text>
+
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#555"/>
+    </marker>
+    <marker id="arr2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#e67e22"/>
+    </marker>
+  </defs>
+</svg>
+<figcaption>Figure 1: AirSpy HF+/Discovery simplified signal chain block diagram. The STA709 IC integrates the PHR mixer, sigma-delta ADC, and decimation chain. AGC feedback operates across both the analogue and digital domains.</figcaption>
+</div>
+
+<p>The HF+ Discovery differs from the original HF+ primarily in that the preselector filter bank is integrated directly onto the main PCB rather than being an optional external module. Both devices present a 50&Omega; impedance at the SMA antenna port and deliver their output as USB audio-class IQ data at 768 kSps with 16-bit depth per component.</p>
+
+<p>The primary IC, the <strong>STMicroelectronics STA709</strong>, is an automotive-grade digital tuner initially designed for AM/FM/DAB/HD Radio reception. Its automotive heritage is significant: automotive applications demand exceptional dynamic range to cope with strong local AM broadcast stations while simultaneously receiving weak distant signals. This application context maps almost perfectly onto the demanding requirements of serious HF monitoring.</p>
+</section>
+
+<!-- 3. FILTER BANK -->
+<section id="filters">
+<h2>3. Input Preselector Filter Bank</h2>
+<p>The first element in the signal chain after the antenna connector is the preselector filter bank. This is perhaps the most consequential stage for overall receiver performance in a dense RF environment.</p>
+
+<h3>3.1 Purpose and Topology</h3>
+<p>A preselector serves two related but distinct purposes. First, it limits the total RF power delivered to subsequent stages, protecting them from strong out-of-band signals that could cause compression or intermodulation. Second, it reduces the noise bandwidth presented to the LNA, preventing aliasing of wideband noise into the IF passband.</p>
+
+<p>In both the HF+ and Discovery, the preselector consists of four selectable bandpass filters (BPFs) covering the HF range from 9 kHz to 31 MHz, plus a separate path for the VHF range (60&ndash;260 MHz). The filter bank is switched based on the tuned frequency.</p>
+
+<div class="figure">
+<svg width="820" height="300" viewBox="0 0 820 300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="820" height="300" fill="#f8fafc" rx="8"/>
+
+  <!-- Axes -->
+  <line x1="60" y1="250" x2="780" y2="250" stroke="#333" stroke-width="2"/>
+  <line x1="60" y1="30" x2="60" y2="250" stroke="#333" stroke-width="2"/>
+
+  <!-- Y axis labels -->
+  <text x="54" y="34" text-anchor="end" font-size="10" fill="#555">0 dB</text>
+  <text x="54" y="85" text-anchor="end" font-size="10" fill="#555">-20</text>
+  <text x="54" y="135" text-anchor="end" font-size="10" fill="#555">-40</text>
+  <text x="54" y="185" text-anchor="end" font-size="10" fill="#555">-60</text>
+  <text x="54" y="250" text-anchor="end" font-size="10" fill="#555">-80</text>
+  <text x="10" y="150" text-anchor="middle" font-size="11" fill="#333" transform="rotate(-90,10,150)">Insertion Loss (dB)</text>
+
+  <!-- X axis labels (log-ish scale) -->
+  <text x="60" y="268" text-anchor="middle" font-size="10" fill="#555">0</text>
+  <text x="150" y="268" text-anchor="middle" font-size="10" fill="#555">1 MHz</text>
+  <text x="245" y="268" text-anchor="middle" font-size="10" fill="#555">5 MHz</text>
+  <text x="370" y="268" text-anchor="middle" font-size="10" fill="#555">10 MHz</text>
+  <text x="500" y="268" text-anchor="middle" font-size="10" fill="#555">17 MHz</text>
+  <text x="620" y="268" text-anchor="middle" font-size="10" fill="#555">31 MHz</text>
+  <text x="740" y="268" text-anchor="middle" font-size="10" fill="#555">260 MHz</text>
+
+  <!-- Grid lines -->
+  <line x1="60" y1="85" x2="780" y2="85" stroke="#eee" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="60" y1="135" x2="780" y2="135" stroke="#eee" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="60" y1="185" x2="780" y2="185" stroke="#eee" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="245" y1="30" x2="245" y2="250" stroke="#ddd" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="370" y1="30" x2="370" y2="250" stroke="#ddd" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="500" y1="30" x2="500" y2="250" stroke="#ddd" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="620" y1="30" x2="620" y2="250" stroke="#ddd" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <!-- Band 1: DC to 5 MHz (9kHz-5MHz passband) -->
+  <path d="M 60 240 L 70 238 L 100 36 L 245 36 L 270 38 L 290 90 L 370 220 L 500 240 L 620 248 L 780 250"
+        fill="rgba(41,128,185,0.15)" stroke="#2980b9" stroke-width="2.5"/>
+  <text x="160" y="55" text-anchor="middle" fill="#2980b9" font-size="11" font-weight="bold">Band 1</text>
+  <text x="160" y="67" text-anchor="middle" fill="#2980b9" font-size="9">9kHz – 5MHz</text>
+
+  <!-- Band 2: 5 to 10 MHz -->
+  <path d="M 60 250 L 200 248 L 230 200 L 245 38 L 370 38 L 390 80 L 420 160 L 500 230 L 620 248 L 780 250"
+        fill="rgba(22,160,133,0.15)" stroke="#16a085" stroke-width="2.5"/>
+  <text x="310" y="55" text-anchor="middle" fill="#16a085" font-size="11" font-weight="bold">Band 2</text>
+  <text x="310" y="67" text-anchor="middle" fill="#16a085" font-size="9">5 – 10 MHz</text>
+
+  <!-- Band 3: 10 to 17 MHz -->
+  <path d="M 60 250 L 330 248 L 360 190 L 375 38 L 500 38 L 515 80 L 545 165 L 620 242 L 780 250"
+        fill="rgba(192,57,43,0.15)" stroke="#c0392b" stroke-width="2.5"/>
+  <text x="440" y="55" text-anchor="middle" fill="#c0392b" font-size="11" font-weight="bold">Band 3</text>
+  <text x="440" y="67" text-anchor="middle" fill="#c0392b" font-size="9">10 – 17 MHz</text>
+
+  <!-- Band 4: 17 to 31 MHz -->
+  <path d="M 60 250 L 460 248 L 490 185 L 505 38 L 620 38 L 640 75 L 660 160 L 740 248 L 780 250"
+        fill="rgba(142,68,173,0.15)" stroke="#8e44ad" stroke-width="2.5"/>
+  <text x="560" y="55" text-anchor="middle" fill="#8e44ad" font-size="11" font-weight="bold">Band 4</text>
+  <text x="560" y="67" text-anchor="middle" fill="#8e44ad" font-size="9">17 – 31 MHz</text>
+
+  <!-- VHF band -->
+  <path d="M 60 250 L 620 250 L 650 200 L 670 38 L 780 38"
+        fill="rgba(243,156,18,0.15)" stroke="#e67e22" stroke-width="2.5" stroke-dasharray="8,4"/>
+  <text x="715" y="55" text-anchor="middle" fill="#e67e22" font-size="11" font-weight="bold">VHF</text>
+  <text x="715" y="67" text-anchor="middle" fill="#e67e22" font-size="9">60–260 MHz</text>
+
+  <!-- Passband markers (-3dB) -->
+  <line x1="60" y1="62" x2="780" y2="62" stroke="#888" stroke-width="1" stroke-dasharray="2,6"/>
+  <text x="785" y="65" font-size="9" fill="#888">−3 dB</text>
+
+  <text x="420" y="287" text-anchor="middle" font-size="11" fill="#333">Frequency (approximate, schematic representation)</text>
+</svg>
+<figcaption>Figure 2: Conceptual frequency response of the four HF preselector bandpass filters and the VHF path. Each band exhibits steep skirts and low in-band insertion loss (&lt;3 dB typical). Actual filter shapes are approximations based on published performance data; proprietary schematics are not publicly available.</figcaption>
+</div>
+
+<h3>3.2 Filter Band Assignments</h3>
+<table>
+  <tr><th>Band</th><th>Frequency Range</th><th>Typical Use</th><th>Notes</th></tr>
+  <tr><td>1</td><td>9 kHz – 5 MHz</td><td>LF/MF, low HF</td><td>Rejects AM broadcast splattering into VLF</td></tr>
+  <tr><td>2</td><td>5 – 10 MHz</td><td>40m / 60m amateur, international broadcast</td><td>Strong AM rejection above 10 MHz</td></tr>
+  <tr><td>3</td><td>10 – 17 MHz</td><td>20m/17m amateur, international shortwave</td><td>Rejects high-power tropical shortwave</td></tr>
+  <tr><td>4</td><td>17 – 31 MHz</td><td>Upper HF, 10m/12m/15m amateur</td><td>Rejects MW/low HF intermodulation</td></tr>
+  <tr><td>VHF</td><td>60 – 260 MHz</td><td>FM broadcast, aviation, weather satellite</td><td>Separate signal path</td></tr>
+</table>
+
+<h3>3.3 Insertion Loss and Noise Figure Impact</h3>
+<p>The preselector filters in the HF+ Discovery are reported to have approximately 1.4 dB of insertion loss. By Friis' cascade noise formula, this loss directly adds to the noise figure seen at the antenna port. However, because the subsequent LNA has approximately 20 dB of gain, the contribution of the filter's insertion loss to the <em>overall</em> system noise figure is heavily diluted.</p>
+
+<div class="math">
+Friis cascade NF:
+F_total = F1 + (F2 - 1)/G1 + (F3 - 1)/(G1·G2) + ...
+
+With filter insertion loss = 1.4 dB (linear: 1.38 noise factor)
+and LNA NF = 0.75 dB (linear: 1.19 noise factor), gain = 20 dB (100):
+
+F_total ≈ 1.38 + (1.19 - 1)/100 ≈ 1.38 + 0.002 ≈ 1.382
+NF_total ≈ 10·log10(1.382) ≈ 1.4 dB
+
+(The LNA stage contribution is negligible by comparison)
+</div>
+
+<p>This reveals a key design principle: the filter's loss dominates the noise figure, not the LNA. This is why the HF+ Discovery, which integrates the preselector (adding 1.4 dB insertion loss), shows a slightly higher noise figure than the original HF+ used without a preselector, but the tradeoff in improved selectivity and dynamic range is highly favourable in real-world dense-signal environments.</p>
+
+<div class="note">The exact filter topology (lumped LC, transmission-line, ceramic resonator) has not been publicly disclosed by Airspy. Based on the frequency range, compact form factor, and the steep skirts observed in VNA measurements published by independent reviewers, a multi-element LC bandpass design with possibly four to six poles per band is the most probable implementation.</div>
+
+<div class="improvement">A switched capacitor or PIN-diode-switched filter bank with steeper skirts (e.g., 7-pole Chebyshev) could improve adjacent-band rejection by an additional 15&ndash;20 dB, at the cost of increased insertion loss (0.5&ndash;1 dB more) and PCB area. For the target use case, the current design represents an appropriate balance.</div>
+</section>
+
+<!-- 4. VGA -->
+<section id="vga">
+<h2>4. Variable Gain Amplifier (VGA) and Attenuation Stage</h2>
+<p>Following the preselector, the signal enters a variable gain / attenuation stage. This stage is central to the HF+'s ability to handle signals spanning many orders of magnitude in power without either clipping the ADC on strong signals or burying weak signals in the noise floor.</p>
+
+<h3>4.1 Function of the VGA</h3>
+<p>The VGA serves a dual role: it can provide gain (amplifying weak signals before the ADC) or act as a controlled attenuator (reducing strong signals to prevent ADC overload). In the HF+ architecture, gain control is applied in discrete steps, software-commanded by the DSP-based AGC system running on the STA709.</p>
+
+<div class="figure">
+<svg width="720" height="260" viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg">
+  <rect width="720" height="260" fill="#f8fafc" rx="8"/>
+
+  <!-- Axes -->
+  <line x1="70" y1="200" x2="660" y2="200" stroke="#333" stroke-width="2"/>
+  <line x1="70" y1="30" x2="70" y2="200" stroke="#333" stroke-width="2"/>
+
+  <!-- Y ticks -->
+  <text x="65" y="34" text-anchor="end" font-size="10" fill="#555">+15 dB</text>
+  <text x="65" y="75" text-anchor="end" font-size="10" fill="#555">+10 dB</text>
+  <text x="65" y="120" text-anchor="end" font-size="10" fill="#555">0 dB</text>
+  <text x="65" y="165" text-anchor="end" font-size="10" fill="#555">−10 dB</text>
+  <text x="65" y="200" text-anchor="end" font-size="10" fill="#555">−15 dB</text>
+
+  <!-- X labels -->
+  <text x="70" y="218" text-anchor="middle" font-size="10" fill="#555">Min</text>
+  <text x="340" y="218" text-anchor="middle" font-size="10" fill="#555">AGC Control Value (0→15)</text>
+  <text x="660" y="218" text-anchor="middle" font-size="10" fill="#555">Max</text>
+
+  <!-- Zero line -->
+  <line x1="70" y1="120" x2="660" y2="120" stroke="#aaa" stroke-width="1" stroke-dasharray="4,4"/>
+
+  <!-- VGA gain curve (stepped) -->
+  <!-- Attenuator region (red) 0-7 steps -->
+  <polyline points="70,200 111,200 111,191 152,191 152,182 193,182 193,168 234,168 234,150 275,150 275,140 316,140 316,120"
+            fill="none" stroke="#c0392b" stroke-width="2.5"/>
+  <!-- Gain region (green) 7-15 steps -->
+  <polyline points="316,120 357,120 357,105 398,105 398,90 439,90 439,75 480,75 480,60 521,60 521,48 562,48 562,38 603,38 603,34 644,34 644,30 660,30"
+            fill="none" stroke="#27ae60" stroke-width="2.5"/>
+
+  <!-- Fill under gain curve -->
+  <polygon points="70,120 70,200 111,200 111,191 152,191 152,182 193,182 193,168 234,168 234,150 275,150 275,140 316,140 316,120"
+           fill="rgba(192,57,43,0.12)"/>
+  <polygon points="316,120 357,120 357,105 398,105 398,90 439,90 439,75 480,75 480,60 521,60 521,48 562,48 562,38 603,38 603,34 644,34 644,30 316,30"
+           fill="rgba(39,174,96,0.12)"/>
+
+  <!-- Labels -->
+  <text x="190" y="175" text-anchor="middle" fill="#c0392b" font-size="11" font-weight="bold">Attenuation</text>
+  <text x="190" y="188" text-anchor="middle" fill="#c0392b" font-size="9">(strong signals)</text>
+  <text x="490" y="50" text-anchor="middle" fill="#27ae60" font-size="11" font-weight="bold">Gain</text>
+  <text x="490" y="63" text-anchor="middle" fill="#27ae60" font-size="9">(weak signals)</text>
+
+  <!-- Transition marker -->
+  <line x1="316" y1="30" x2="316" y2="200" stroke="#e67e22" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="316" y="232" text-anchor="middle" fill="#e67e22" font-size="10">Unity gain</text>
+
+  <!-- NF degradation annotation -->
+  <text x="400" y="240" text-anchor="middle" fill="#888" font-size="10" font-style="italic">VGA noise figure increases in attenuation region due to active element thermal noise</text>
+
+  <!-- Y axis label -->
+  <text x="15" y="115" text-anchor="middle" font-size="11" fill="#333" transform="rotate(-90,15,115)">Gain / Attenuation (dB)</text>
+</svg>
+<figcaption>Figure 3: Conceptual VGA transfer characteristic. The stage transitions from attenuation (for strong signals) to amplification (for weak signals) under DSP/AGC control. Stepped values reflect 1 dB increment control resolution.</figcaption>
+</div>
+
+<h3>4.2 The Noise Figure Trade-off</h3>
+<p>Using an <em>active</em> VGA as an attenuator introduces a fundamental noise figure penalty not present with a purely passive attenuator. A passive resistive or switched attenuator has a noise figure exactly equal to its insertion loss; it adds no excess noise beyond thermal noise from the resistive elements. An active VGA in attenuation mode still contributes the noise of its active devices on top of the attenuation function.</p>
+
+<p>However, the AirSpy design places the VGA <em>after</em> the LNA in the signal chain. By the time the signal reaches the VGA, the cascade noise figure is dominated by the early stages. The incremental noise figure added by a VGA after a 20 dB LNA stage is attenuated by that 20 dB of preceding gain, making its absolute contribution to overall system noise figure small.</p>
+
+<div class="math">
+If VGA in attenuation mode adds excess NF of ~3 dB beyond the attenuation value,
+and LNA has 20 dB gain (G1 = 100):
+
+VGA contribution to system NF = (F_VGA - 1) / G1
+
+At maximum attenuation (15 dB, F_VGA ≈ 2 for active device):
+VGA contribution ≈ (2 - 1) / 100 = 0.01 → 0.04 dB
+
+This is negligible. The dominant NF contribution remains the preselector + LNA cascade.
+</div>
+
+<h3>4.3 Why Not a Pure Passive Attenuator?</h3>
+<p>A purely passive attenuator (switched resistive pads or PIN-diode switched L-pads) placed <em>before</em> the LNA would offer superior noise performance in high-signal conditions because it introduces no excess active noise. However, such a design has significant practical drawbacks:</p>
+<ul style="margin: 10px 0 14px 24px; line-height: 1.8;">
+  <li><strong>Impedance matching complexity:</strong> Each switched attenuation pad must maintain 50&Omega; match across the full frequency range; achieving this with fine-grained steps requires careful design.</li>
+  <li><strong>Switching artefacts:</strong> PIN diode or relay switches introduce glitches during switching transients that can cause momentary saturation of downstream stages.</li>
+  <li><strong>Noise figure degradation before LNA:</strong> Any passive loss <em>before</em> the LNA adds directly to the system noise figure (not divided by LNA gain). A 10 dB passive attenuator before the LNA would add exactly 10 dB to the system NF.</li>
+  <li><strong>PCB area and cost:</strong> A full switched attenuator bank with sufficient range would require additional components and board space.</li>
+</ul>
+
+<p>The active VGA approach, positioned <em>after</em> the LNA, provides the dynamic range management needed with a practical circuit that adds negligible noise in the context of the overall cascade.</p>
+
+<div class="improvement">A parallel passive attenuation path engaged only for extremely strong signals (e.g., a 20 dB fixed passive pad switched in when input exceeds &minus;20 dBm) would theoretically allow the LNA to be bypassed during strong signal events, eliminating all active noise contribution. This is the approach taken in some professional HF receivers. The added relay/switch complexity, switching time, and cost make it a minor incremental improvement for the primary use case.</div>
+
+<h3>4.4 Multi-Stage AGC Architecture</h3>
+<p>The HF+ implements three interlocked AGC loops that cooperate to maintain optimal performance:</p>
+<ol style="margin: 10px 0 14px 24px; line-height: 1.8;">
+  <li><strong>Analog IF AGC:</strong> Controls the VGA gain immediately before the ADC input. This is the primary loop for preventing ADC saturation.</li>
+  <li><strong>Digital IF AGC:</strong> Operates in the digital domain after the ADC; scales the data stream. Activates when the signal exceeds &minus;6 dBFS.</li>
+  <li><strong>Narrowband AGC:</strong> Acts on the final filtered signal within the selected VFO bandwidth; optimises gain for the specific channel of interest.</li>
+</ol>
+<p>This cascaded arrangement allows the receiver to simultaneously optimise for both weak-signal sensitivity (by maximising gain when no strong signals are present) and strong-signal linearity (by backing off gain rapidly when large signals appear), without requiring the user to manually adjust any controls.</p>
+</section>
+
+<!-- 5. LNA -->
+<section id="lna">
+<h2>5. Low Noise Amplifier (LNA)</h2>
+<p>The LNA is the most noise-critical active stage in the receive chain. Its noise figure and gain set the fundamental sensitivity limit of the receiver, according to Friis' formula, since it is the first amplifying element after the passive preselector.</p>
+
+<h3>5.1 Component: MiniCircuits PSA4-5043+</h3>
+<p>Independent technical analysis of the AirSpy HF+ hardware has identified the LNA as a <strong>MiniCircuits PSA4-5043+</strong> monolithic microwave integrated circuit (MMIC). This device is a high-gain, low-noise pseudomorphic high-electron-mobility transistor (pHEMT) amplifier with the following published characteristics:</p>
+
+<table>
+  <tr><th>Parameter</th><th>Value</th><th>Conditions</th></tr>
+  <tr><td>Frequency range</td><td>50 MHz – 4 GHz</td><td>Usable</td></tr>
+  <tr><td>Gain at 500 MHz</td><td>~20 dB</td><td>Vcc = 3 V</td></tr>
+  <tr><td>Noise Figure at 500 MHz</td><td>~0.75 dB</td><td>Vcc = 3 V</td></tr>
+  <tr><td>OIP3 at 1 GHz</td><td>+27 dBm</td><td>Vcc = 3 V</td></tr>
+  <tr><td>1 dB compression point</td><td>+13 dBm (output)</td><td>Vcc = 3 V</td></tr>
+  <tr><td>Supply current</td><td>~40 mA</td><td>Vcc = 3 V</td></tr>
+</table>
+
+<div class="note">The PSA4-5043+ is specified from 50 MHz. For HF operation (9 kHz – 31 MHz), the device is used below its rated frequency floor. At HF frequencies, the gain typically increases slightly (MMIC gain generally rises as frequency decreases), and the noise figure may differ from the VHF specification. The measured HF+ system NF of ~0.75 dB suggests the LNA performs excellently at HF despite being nominally specified for VHF and above.</div>
+
+<h3>5.2 Gain and Noise Figure in the HF Chain</h3>
+<p>The LNA provides approximately 20&ndash;21 dB of gain. This large gain has two critical consequences for system performance:</p>
+
+<p><strong>1. Noise Figure:</strong> By Friis' formula, 20 dB of gain means that the noise contribution of every subsequent stage (VGA, mixer, ADC) is divided by a factor of 100 before being referred to the antenna input. This effectively makes the system noise figure equal to the cascade of preselector loss and LNA noise figure alone. Measured system NF of approximately 0.75&ndash;1.4 dB (depending on configuration) is consistent with this analysis.</p>
+
+<p><strong>2. Dynamic Range:</strong> High LNA gain means that the ADC input sees a stronger signal. This is beneficial for weak signals (moves the signal above the ADC noise floor) but means the system can saturate at lower antenna input powers. The AGC manages this tension by backing off LNA gain when strong signals are present. The IIP3 of +15 dBm (measured at the system input at maximum gain) reflects the excellent linearity of the pHEMT device.</p>
+
+<div class="figure">
+<svg width="700" height="200" viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg">
+  <rect width="700" height="200" fill="#f8fafc" rx="8"/>
+
+  <!-- Noise figure cascade bar chart -->
+  <text x="350" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">Cascaded Noise Figure Contributions (HF+ Discovery)</text>
+
+  <!-- Bars -->
+  <!-- Stage labels -->
+  <text x="115" y="155" text-anchor="middle" font-size="10" fill="#555">Preselector</text>
+  <text x="115" y="167" text-anchor="middle" font-size="10" fill="#555">Filter</text>
+  <text x="115" y="179" text-anchor="middle" font-size="10" fill="#555">1.4 dB loss</text>
+
+  <text x="265" y="155" text-anchor="middle" font-size="10" fill="#555">LNA</text>
+  <text x="265" y="167" text-anchor="middle" font-size="10" fill="#555">(PSA4-5043+)</text>
+  <text x="265" y="179" text-anchor="middle" font-size="10" fill="#555">NF 0.75 dB</text>
+
+  <text x="415" y="155" text-anchor="middle" font-size="10" fill="#555">VGA Stage</text>
+  <text x="415" y="167" text-anchor="middle" font-size="10" fill="#555">NF ~2 dB</text>
+  <text x="415" y="179" text-anchor="middle" font-size="10" fill="#555">(÷ 100 by LNA)</text>
+
+  <text x="565" y="155" text-anchor="middle" font-size="10" fill="#555">ADC + Mixer</text>
+  <text x="565" y="167" text-anchor="middle" font-size="10" fill="#555">NF ~5 dB</text>
+  <text x="565" y="179" text-anchor="middle" font-size="10" fill="#555">(÷ 10000 by chain)</text>
+
+  <!-- Bar heights proportional to contribution -->
+  <!-- Filter: 1.4 dB → contributes 1.38 (noise factor) → most of total -->
+  <rect x="70" y="40" width="90" height="104" fill="#c0392b" rx="4"/>
+  <text x="115" y="35" text-anchor="middle" font-size="11" fill="#c0392b" font-weight="bold">1.38 NF</text>
+
+  <!-- LNA: adds tiny bit after filter (0.002) -->
+  <rect x="220" y="138" width="90" height="6" fill="#8e44ad" rx="4"/>
+  <text x="265" y="132" text-anchor="middle" font-size="11" fill="#8e44ad" font-weight="bold">+0.006 NF</text>
+
+  <!-- VGA -->
+  <rect x="370" y="141" width="90" height="3" fill="#16a085" rx="4"/>
+  <text x="415" y="135" text-anchor="middle" font-size="11" fill="#16a085" font-weight="bold">+0.01 NF</text>
+
+  <!-- ADC -->
+  <rect x="520" y="142" width="90" height="2" fill="#27ae60" rx="4"/>
+  <text x="565" y="136" text-anchor="middle" font-size="11" fill="#27ae60" font-weight="bold">+0.002 NF</text>
+
+  <!-- Baseline -->
+  <line x1="50" y1="144" x2="660" y2="144" stroke="#333" stroke-width="2"/>
+  <text x="50" y="158" font-size="9" fill="#333">0</text>
+
+  <!-- Total NF label -->
+  <text x="350" y="193" text-anchor="middle" font-size="11" fill="#333" font-style="italic">Total system NF ≈ 1.4 dB — dominated entirely by preselector insertion loss</text>
+</svg>
+<figcaption>Figure 4: Relative noise figure contributions of each signal chain stage. The preselector filter loss (1.4 dB) dominates the overall system NF; all subsequent stages contribute negligibly due to the LNA gain of 20 dB.</figcaption>
+</div>
+</section>
+
+<!-- 6. MIXER AND IF -->
+<section id="mixer">
+<h2>6. Polyphase Harmonic Rejection Mixer and IF Architecture</h2>
+<p>After the LNA, the signal enters the mixer stage, which translates it from RF to a low intermediate frequency (IF). The choice of mixer topology and IF strategy are critical design decisions that profoundly affect receiver performance.</p>
+
+<h3>6.1 The DC Spur Problem in Zero-IF Receivers</h3>
+<p>Many low-cost SDRs use a <em>direct-conversion</em> (zero-IF) architecture, in which the local oscillator (LO) is set exactly to the received frequency, placing the signal of interest at DC (0 Hz) in the baseband. This architecture is attractive for its simplicity, but suffers from two severe problems:</p>
+<ol style="margin: 10px 0 14px 24px; line-height: 1.8;">
+  <li><strong>LO self-mixing / DC offset:</strong> Inevitable leakage of the LO signal into the RF port (or direct pickup by the antenna) causes the LO to mix with itself, producing a large DC offset at the mixer output that can saturate downstream stages and obscure signals near the tuned frequency.</li>
+  <li><strong>1/f (flicker) noise:</strong> Active devices in the mixer contribute flicker noise that rises steeply as frequency approaches DC, creating a "noise mountain" exactly where the wanted signal is placed in a zero-IF receiver.</li>
+</ol>
+
+<h3>6.2 The HF+ Solution: Low-IF Architecture</h3>
+<p>The HF+ avoids zero-IF entirely by using a <strong>low-IF architecture</strong>: the LO is offset from the desired signal frequency by a small but nonzero IF. The wanted signal appears at this offset frequency rather than at DC, safely away from both the DC offset and the 1/f noise peak.</p>
+
+<div class="hypothesis">The specific IF value used in the HF+ is not publicly disclosed by Airspy. Based on the ADC sampling rate of 36 MSPS, the published alias-free bandwidth of 600 kHz, and typical low-IF design practice, the IF is likely in the range of 200 kHz to 2 MHz. The DSP subsystem then performs a digital frequency shift to translate the low-IF signal to zero-Hz in the digital domain, where 1/f noise is no longer a concern (digital circuits do not exhibit 1/f noise).</div>
+
+<p>Additionally, the IF is adaptively shifted by the firmware to avoid any correlation with the sigma-delta modulator's internal clock harmonics or sampling rate spurs. This adaptive tuning is a key reason for the HF+'s unusually clean noise floor across its entire frequency range.</p>
+
+<h3>6.3 Polyphase Harmonic Rejection (PHR) Mixer</h3>
+<p>Standard mixers multiply the RF signal with the LO to produce the desired IF, but they also produce mixing products at LO harmonics (2×LO, 3×LO, etc.). Signals at these harmonic frequencies are aliased down to the same IF as the desired signal, creating interference. Conventionally, this is suppressed by front-end bandpass filtering, but such filters would need to track the tuned frequency&mdash;adding cost and complexity.</p>
+
+<p>The STA709's PHR mixer uses a polyphase technique to achieve harmonic rejection without tracking filters. By creating multiple phase-shifted versions of the LO and combining them with appropriate weighting, signals at certain LO harmonics cancel in the output while the fundamental mixing product adds coherently.</p>
+
+<div class="figure">
+<svg width="720" height="280" viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg">
+  <rect width="720" height="280" fill="#f8fafc" rx="8"/>
+
+  <text x="360" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">Polyphase Harmonic Rejection: Conceptual Phasor Diagram</text>
+
+  <!-- Left: standard mixer harmonics -->
+  <text x="175" y="50" text-anchor="middle" font-size="11" fill="#c0392b" font-weight="bold">Standard Single-Phase Mixer</text>
+  <text x="175" y="63" text-anchor="middle" font-size="10" fill="#888">(all harmonics pass through)</text>
+
+  <!-- Frequency response bars for standard -->
+  <rect x="90" y="180" width="20" height="60" fill="#c0392b" rx="2"/>
+  <rect x="125" y="210" width="20" height="30" fill="#c0392b" rx="2" opacity="0.6"/>
+  <rect x="160" y="215" width="20" height="25" fill="#c0392b" rx="2" opacity="0.5"/>
+  <rect x="195" y="212" width="20" height="28" fill="#c0392b" rx="2" opacity="0.55"/>
+  <rect x="230" y="218" width="20" height="22" fill="#c0392b" rx="2" opacity="0.4"/>
+
+  <text x="100" y="252" text-anchor="middle" font-size="9" fill="#555">f_LO</text>
+  <text x="135" y="252" text-anchor="middle" font-size="9" fill="#555">3f</text>
+  <text x="170" y="252" text-anchor="middle" font-size="9" fill="#555">5f</text>
+  <text x="205" y="252" text-anchor="middle" font-size="9" fill="#555">7f</text>
+  <text x="240" y="252" text-anchor="middle" font-size="9" fill="#555">9f</text>
+
+  <line x1="75" y1="240" x2="270" y2="240" stroke="#333" stroke-width="1.5"/>
+  <text x="175" y="270" text-anchor="middle" font-size="10" fill="#555">Mixer output (mixing products at odd harmonics)</text>
+
+  <!-- Divider -->
+  <line x1="350" y1="40" x2="350" y2="260" stroke="#ddd" stroke-width="2"/>
+
+  <!-- Right: PHR mixer -->
+  <text x="535" y="50" text-anchor="middle" font-size="11" fill="#27ae60" font-weight="bold">PHR Mixer (HF+ STA709)</text>
+  <text x="535" y="63" text-anchor="middle" font-size="10" fill="#888">(harmonics cancelled by polyphase combination)</text>
+
+  <rect x="450" y="180" width="20" height="60" fill="#27ae60" rx="2"/>
+  <!-- 3rd,5th... suppressed -->
+  <rect x="485" y="235" width="20" height="5" fill="#27ae60" rx="2" opacity="0.3"/>
+  <text x="495" y="227" text-anchor="middle" font-size="8" fill="#27ae60">≈0</text>
+  <rect x="520" y="237" width="20" height="3" fill="#27ae60" rx="2" opacity="0.3"/>
+  <text x="530" y="230" text-anchor="middle" font-size="8" fill="#27ae60">≈0</text>
+  <rect x="555" y="237" width="20" height="3" fill="#27ae60" rx="2" opacity="0.2"/>
+  <rect x="590" y="235" width="20" height="5" fill="#27ae60" rx="2" opacity="0.25"/>
+  <!-- 21st harmonic not cancelled -->
+  <rect x="625" y="215" width="20" height="25" fill="#e67e22" rx="2" opacity="0.7"/>
+  <text x="635" y="210" text-anchor="middle" font-size="8" fill="#e67e22">21st</text>
+
+  <text x="460" y="252" text-anchor="middle" font-size="9" fill="#555">f_LO</text>
+  <text x="495" y="252" text-anchor="middle" font-size="9" fill="#555">3f</text>
+  <text x="530" y="252" text-anchor="middle" font-size="9" fill="#555">5f</text>
+  <text x="565" y="252" text-anchor="middle" font-size="9" fill="#555">7f</text>
+  <text x="600" y="252" text-anchor="middle" font-size="9" fill="#555">9f</text>
+  <text x="635" y="252" text-anchor="middle" font-size="9" fill="#555">21f</text>
+
+  <line x1="435" y1="240" x2="660" y2="240" stroke="#333" stroke-width="1.5"/>
+  <text x="535" y="270" text-anchor="middle" font-size="10" fill="#555">PHR output: harmonics 3–19 suppressed; 21st remains (out-of-band)</text>
+
+  <!-- Gain labels -->
+  <text x="100" y="175" text-anchor="middle" font-size="9" fill="#c0392b">0 dBc</text>
+  <text x="460" y="175" text-anchor="middle" font-size="9" fill="#27ae60">0 dBc</text>
+
+  <!-- Suppression arrows -->
+  <line x1="495" y1="180" x2="495" y2="228" stroke="#27ae60" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr)"/>
+  <text x="510" y="205" font-size="9" fill="#27ae60">&gt;60 dBc</text>
+</svg>
+<figcaption>Figure 5: Conceptual comparison of harmonic rejection between a standard single-phase mixer and the polyphase harmonic rejection (PHR) mixer in the STA709. The PHR mixer cancels odd harmonics up to the 19th; the 21st harmonic passes but lies far above the HF band.</figcaption>
+</div>
+
+<p>For a 16-phase polyphase system, the harmonics that are <em>not</em> cancelled are those at (16k ± 1) × f<sub>LO</sub>, i.e., the 15th, 17th, 31st, 33rd, etc. The STA709 achieves rejection up to the 21st harmonic, implying either a higher phase count or additional post-mixing harmonic rejection filtering. For HF use (up to 31 MHz), even the 3rd harmonic at 93 MHz is well above the HF band, meaning effectively all potentially problematic harmonics are far enough out of band that the preselector filter provides additional attenuation.</p>
+
+<div class="math">
+For a signal tuned to f_RF = 10 MHz:
+  - 3rd harmonic response: f = 30 MHz (edge of HF band — filtered by preselector)
+  - 5th harmonic response: f = 50 MHz (VHF — strongly rejected by HF preselector)
+  - 21st harmonic response: f = 210 MHz (rejected by both PHR and preselector)
+
+Effective alias-free tuning: 9 kHz – 31 MHz (HF), 60–260 MHz (VHF)
+No tracking filter required — dramatic simplification vs. conventional superhet design.
+</div>
+</section>
+
+<!-- 7. SIGMA-DELTA ADC -->
+<section id="sigma-delta">
+<h2>7. The Sigma-Delta Analogue-to-Digital Converter</h2>
+<p>The sigma-delta (&Sigma;&Delta;) ADC is the heart of the HF+ design and the primary reason for its exceptional dynamic range. Understanding its architecture is essential to appreciating why this receiver outperforms competing designs using conventional successive-approximation (SAR) or flash ADCs.</p>
+
+<h3>7.1 Sigma-Delta Modulation Principles</h3>
+<p>A sigma-delta modulator converts an analogue input to a high-speed, low-resolution digital bitstream (1-bit or multi-bit), relying on massive oversampling and noise shaping to achieve high effective resolution. The key insight is that quantisation noise is not reduced in total power, but is spectrally <em>shaped</em> by the modulator's feedback topology so that noise power is pushed to high frequencies, away from the signal band of interest.</p>
+
+<div class="figure">
+<svg width="760" height="300" viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="760" height="300" fill="#f8fafc" rx="8"/>
+
+  <text x="380" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">4th-Order Sigma-Delta Modulator: Signal Flow (STA709)</text>
+
+  <!-- Input -->
+  <rect x="15" y="115" width="55" height="40" rx="5" fill="#1a6fa8" stroke="#0d4a72" stroke-width="1.5"/>
+  <text x="42" y="133" text-anchor="middle" fill="white" font-size="10" font-weight="bold">Analog</text>
+  <text x="42" y="146" text-anchor="middle" fill="white" font-size="10">Input</text>
+
+  <!-- 4 integrator/loop stages -->
+  <!-- Stage 1 -->
+  <circle cx="130" cy="135" r="18" fill="white" stroke="#c0392b" stroke-width="2"/>
+  <text x="130" y="132" text-anchor="middle" fill="#c0392b" font-size="14">+</text>
+  <text x="130" y="143" text-anchor="middle" fill="#c0392b" font-size="9">Σ₁</text>
+
+  <rect x="160" y="120" width="50" height="30" rx="4" fill="#c0392b" stroke="#922b21" stroke-width="1.5"/>
+  <text x="185" y="133" text-anchor="middle" fill="white" font-size="10" font-weight="bold">∫₁</text>
+  <text x="185" y="145" text-anchor="middle" fill="white" font-size="9">Loop 1</text>
+
+  <!-- Stage 2 -->
+  <circle cx="255" cy="135" r="18" fill="white" stroke="#c0392b" stroke-width="2"/>
+  <text x="255" y="132" text-anchor="middle" fill="#c0392b" font-size="14">+</text>
+  <text x="255" y="143" text-anchor="middle" fill="#c0392b" font-size="9">Σ₂</text>
+
+  <rect x="285" y="120" width="50" height="30" rx="4" fill="#c0392b" stroke="#922b21" stroke-width="1.5"/>
+  <text x="310" y="133" text-anchor="middle" fill="white" font-size="10" font-weight="bold">∫₂</text>
+  <text x="310" y="145" text-anchor="middle" fill="white" font-size="9">Loop 2</text>
+
+  <!-- Stage 3 -->
+  <circle cx="380" cy="135" r="18" fill="white" stroke="#c0392b" stroke-width="2"/>
+  <text x="380" y="132" text-anchor="middle" fill="#c0392b" font-size="14">+</text>
+  <text x="380" y="143" text-anchor="middle" fill="#c0392b" font-size="9">Σ₃</text>
+
+  <rect x="410" y="120" width="50" height="30" rx="4" fill="#c0392b" stroke="#922b21" stroke-width="1.5"/>
+  <text x="435" y="133" text-anchor="middle" fill="white" font-size="10" font-weight="bold">∫₃</text>
+  <text x="435" y="145" text-anchor="middle" fill="white" font-size="9">Loop 3</text>
+
+  <!-- Stage 4 -->
+  <circle cx="505" cy="135" r="18" fill="white" stroke="#c0392b" stroke-width="2"/>
+  <text x="505" y="132" text-anchor="middle" fill="#c0392b" font-size="14">+</text>
+  <text x="505" y="143" text-anchor="middle" fill="#c0392b" font-size="9">Σ₄</text>
+
+  <rect x="535" y="120" width="50" height="30" rx="4" fill="#c0392b" stroke="#922b21" stroke-width="1.5"/>
+  <text x="560" y="133" text-anchor="middle" fill="white" font-size="10" font-weight="bold">∫₄</text>
+  <text x="560" y="145" text-anchor="middle" fill="white" font-size="9">Loop 4</text>
+
+  <!-- Quantiser -->
+  <rect x="605" y="115" width="60" height="40" rx="4" fill="#8e44ad" stroke="#6c3483" stroke-width="1.5"/>
+  <text x="635" y="132" text-anchor="middle" fill="white" font-size="10" font-weight="bold">Multi-bit</text>
+  <text x="635" y="144" text-anchor="middle" fill="white" font-size="10">Quant.</text>
+
+  <!-- Output -->
+  <rect x="685" y="120" width="60" height="30" rx="4" fill="#27ae60" stroke="#1e8449" stroke-width="1.5"/>
+  <text x="715" y="133" text-anchor="middle" fill="white" font-size="10" font-weight="bold">Digital</text>
+  <text x="715" y="144" text-anchor="middle" fill="white" font-size="9">36 MSPS</text>
+
+  <!-- Forward path arrows -->
+  <line x1="70" y1="135" x2="112" y2="135" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="148" y1="135" x2="160" y2="135" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="210" y1="135" x2="237" y2="135" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="273" y1="135" x2="285" y2="135" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="335" y1="135" x2="362" y2="135" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="398" y1="135" x2="410" y2="135" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="460" y1="135" x2="487" y2="135" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="523" y1="135" x2="535" y2="135" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="585" y1="135" x2="605" y2="135" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="665" y1="135" x2="685" y2="135" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Feedback path (single, simplified) -->
+  <path d="M 635 155 Q 635 220 380 220 Q 130 220 130 153" fill="none" stroke="#e74c3c" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="380" y="240" text-anchor="middle" fill="#e74c3c" font-size="10" font-weight="bold">Multi-bit DAC feedback — 4 nested loops</text>
+
+  <!-- Noise shaping annotation -->
+  <text x="380" y="270" text-anchor="middle" fill="#555" font-size="10" font-style="italic">4th-order noise shaping: quantisation noise shaped as (1-z⁻¹)⁴ — pushes noise to f_s/2</text>
+  <text x="380" y="284" text-anchor="middle" fill="#555" font-size="10" font-style="italic">Oversampling at 36 MSPS enables ~24-bit effective resolution in baseband</text>
+
+  <!-- Dashed group box -->
+  <rect x="115" y="105" width="505" height="125" rx="6" fill="none" stroke="#c0392b" stroke-width="1" stroke-dasharray="6,4"/>
+  <text x="367" y="101" text-anchor="middle" fill="#c0392b" font-size="10">4th-order loop filter</text>
+</svg>
+<figcaption>Figure 6: Simplified signal flow of the 4th-order multi-bit sigma-delta modulator in the STA709. Four cascaded integrator stages provide 4th-order noise shaping, pushing quantisation noise above the signal band. Multi-bit quantisation reduces the quantisation step size relative to a 1-bit modulator, improving linearity and reducing in-band noise.</figcaption>
+</div>
+
+<h3>7.2 Noise Shaping and Effective Resolution</h3>
+<p>The order of the sigma-delta loop filter determines how steeply noise is shaped away from DC. For an Nth-order modulator oversampled by a ratio OSR, the theoretical signal-to-noise ratio is:</p>
+
+<div class="math">
+For an Nth-order, multi-bit (B-bit internal quantiser) Σ∆ modulator:
+
+SNR_max = 6.02·B + 1.76 + 10·N·log10(OSR) + 10·log10(2N+1) - 10·log10(π^2N) dB
+
+For N=4 (4th-order), OSR = 36e6/768e3 ≈ 47:
+  10·4·log10(47) ≈ 67 dB from oversampling
+  Additional from 4th-order shaping: ~20 dB
+
+Total theoretical SNR ≈ B·6.02 + 87 dB
+
+With multi-bit internal quantiser (hypothesised 4-bit = 16 levels):
+  B·6.02 = 24 dB
+  Total ≈ 111 dB  → matches measured BDR of 110 dB
+
+This is consistent with "24-bit analog resolution" marketing claim:
+  24 × 6.02 = 144 dB theoretical maximum, but practical limits from
+  clock jitter, thermal noise, and finite component tolerances reduce
+  achievable SNR to ~110-113 dB.
+</div>
+
+<h3>7.3 The "24-Bit Analogue" Claim</h3>
+<p>AirSpy describes the sigma-delta modulator as providing "24-bit equivalent analogue resolution." This requires careful interpretation. The modulator itself does not produce 24 binary digits of independent information per sample at its native 36 MSPS rate — rather, the combination of its noise shaping, oversampling, and the subsequent decimation chain produces an <em>effective number of bits</em> (ENOB) equivalent to a 24-bit linear ADC operating over the desired signal bandwidth. After decimation to 768 kSps, the effective dynamic range is approximately 18 bits (108 dB), with the gap between 24 and 18 bits accounted for by practical non-idealities.</p>
+
+<div class="note">The "24-bit analogue resolution" should be understood as referring to the dynamic range potential of the analogue modulator loop <em>before</em> decimation losses. Decimation and digital filtering reduce this to 18-bit effective output resolution, which still represents an extraordinary 108 dB of usable dynamic range — far beyond what any 16-bit linear ADC at the same sample rate could achieve.</div>
+
+<h3>7.4 Why Sigma-Delta Over Conventional ADCs?</h3>
+<p>At 36 MSPS, a conventional 16-bit SAR ADC would provide a theoretical SNR of approximately 96 dB (6.02 × 16 + 1.76 dB), already limited by practical component tolerances to closer to 85&ndash;90 dB. A sigma-delta operating at the same clock rate but with noise shaping achieves 110+ dB in a fraction of the bandwidth. The tradeoff is reduced bandwidth (only 600 kHz alias-free vs. 18 MHz for a conventional Nyquist ADC), which is perfectly suited to the HF+ use case where typically one to a few MHz of spectrum is of interest at any given time.</p>
+
+<p>Furthermore, the sigma-delta architecture's 24-bit equivalent analogue resolution provides crucial protection against overdriving the input. Strong signals that would clip a 16-bit ADC can be accommodated within the sigma-delta's dynamic range, with the AGC only needing to manage signals more than 110 dB above the noise floor — an exceptional margin compared to competitive SDR designs.</p>
+</section>
+
+<!-- 8. DECIMATION AND IQ -->
+<section id="decimation">
+<h2>8. Decimation Chain and IQ Output</h2>
+
+<h3>8.1 The Decimation Process</h3>
+<p>The sigma-delta ADC produces data at 36 MSPS with its noise shaping concentrated above the signal band. To extract usable audio-rate data, this stream must be low-pass filtered and decimated (sample rate reduced) by a decimation ratio D = 36,000,000 / 768,000 ≈ 47.</p>
+
+<p>The HF+ uses a cascade of Cascaded Integrator-Comb (CIC) and Finite Impulse Response (FIR) filters for this purpose:</p>
+
+<ul style="margin: 10px 0 14px 24px; line-height: 1.8;">
+  <li><strong>CIC filter:</strong> An extremely efficient decimation filter implementable with only adders and delay registers (no multipliers). Each CIC stage provides a sin(x)/x frequency response that attenuates high-frequency energy (including the shaped quantisation noise) while decimating by a factor of 2 to 32. CIC filters are ideal as the first decimation stage because they are computationally trivial at high sample rates.</li>
+  <li><strong>FIR compensation filter:</strong> The CIC response has a droop across its passband (the sin(x)/x roll-off). A short FIR filter with an inverse-droop response compensates for this, producing a flat passband.</li>
+  <li><strong>Final FIR filter:</strong> A sharp-cutoff low-pass FIR filter provides the final alias rejection before the output sample rate. The alias rejection of 108 dBc reported for the HF+ is achieved by this stage.</li>
+</ul>
+
+<div class="figure">
+<svg width="760" height="220" viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg">
+  <rect width="760" height="220" fill="#f8fafc" rx="8"/>
+
+  <text x="380" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">Decimation Chain: 36 MSPS → 768 kSps</text>
+
+  <!-- Stages -->
+  <!-- Σ∆ ADC output -->
+  <rect x="15" y="80" width="75" height="50" rx="5" fill="#d35400" stroke="#a04000" stroke-width="1.5"/>
+  <text x="52" y="101" text-anchor="middle" fill="white" font-size="10" font-weight="bold">Σ∆ ADC</text>
+  <text x="52" y="114" text-anchor="middle" fill="white" font-size="9">36 MSPS</text>
+  <text x="52" y="125" text-anchor="middle" fill="white" font-size="9">~6-bit raw</text>
+
+  <line x1="90" y1="105" x2="110" y2="105" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- CIC stage -->
+  <rect x="110" y="75" width="90" height="60" rx="5" fill="#2980b9" stroke="#1a6fa8" stroke-width="1.5"/>
+  <text x="155" y="98" text-anchor="middle" fill="white" font-size="10" font-weight="bold">CIC Filter</text>
+  <text x="155" y="111" text-anchor="middle" fill="white" font-size="9">÷ 12</text>
+  <text x="155" y="124" text-anchor="middle" fill="white" font-size="9">3 MSPS out</text>
+
+  <line x1="200" y1="105" x2="220" y2="105" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- FIR compensate -->
+  <rect x="220" y="75" width="100" height="60" rx="5" fill="#16a085" stroke="#0e7060" stroke-width="1.5"/>
+  <text x="270" y="97" text-anchor="middle" fill="white" font-size="10" font-weight="bold">FIR Comp.</text>
+  <text x="270" y="110" text-anchor="middle" fill="white" font-size="9">Droop correct</text>
+  <text x="270" y="123" text-anchor="middle" fill="white" font-size="9">3 MSPS</text>
+
+  <line x1="320" y1="105" x2="340" y2="105" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- CIC2 -->
+  <rect x="340" y="75" width="90" height="60" rx="5" fill="#2980b9" stroke="#1a6fa8" stroke-width="1.5"/>
+  <text x="385" y="98" text-anchor="middle" fill="white" font-size="10" font-weight="bold">CIC Filter</text>
+  <text x="385" y="111" text-anchor="middle" fill="white" font-size="9">÷ 4</text>
+  <text x="385" y="124" text-anchor="middle" fill="white" font-size="9">768 kSps</text>
+
+  <line x1="430" y1="105" x2="450" y2="105" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Final FIR -->
+  <rect x="450" y="75" width="100" height="60" rx="5" fill="#8e44ad" stroke="#6c3483" stroke-width="1.5"/>
+  <text x="500" y="97" text-anchor="middle" fill="white" font-size="10" font-weight="bold">Final FIR</text>
+  <text x="500" y="110" text-anchor="middle" fill="white" font-size="9">108 dBc alias</text>
+  <text x="500" y="123" text-anchor="middle" fill="white" font-size="9">rejection</text>
+
+  <line x1="550" y1="105" x2="570" y2="105" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- DDC -->
+  <rect x="570" y="75" width="80" height="60" rx="5" fill="#c0392b" stroke="#922b21" stroke-width="1.5"/>
+  <text x="610" y="97" text-anchor="middle" fill="white" font-size="10" font-weight="bold">Digital</text>
+  <text x="610" y="110" text-anchor="middle" fill="white" font-size="10">Down Conv.</text>
+  <text x="610" y="123" text-anchor="middle" fill="white" font-size="9">IF→0 Hz</text>
+
+  <line x1="650" y1="105" x2="670" y2="105" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Output -->
+  <rect x="670" y="75" width="80" height="60" rx="5" fill="#27ae60" stroke="#1e8449" stroke-width="1.5"/>
+  <text x="710" y="95" text-anchor="middle" fill="white" font-size="10" font-weight="bold">IQ Output</text>
+  <text x="710" y="108" text-anchor="middle" fill="white" font-size="9">2×16-bit</text>
+  <text x="710" y="121" text-anchor="middle" fill="white" font-size="9">768 kSps</text>
+  <text x="710" y="132" text-anchor="middle" fill="white" font-size="9">USB audio</text>
+
+  <!-- Resolution evolution -->
+  <text x="52" y="165" text-anchor="middle" font-size="9" fill="#888">~6 bit</text>
+  <text x="155" y="165" text-anchor="middle" font-size="9" fill="#888">~14 bit</text>
+  <text x="270" y="165" text-anchor="middle" font-size="9" fill="#888">~14 bit</text>
+  <text x="385" y="165" text-anchor="middle" font-size="9" fill="#888">~18 bit</text>
+  <text x="500" y="165" text-anchor="middle" font-size="9" fill="#888">18 bit eff.</text>
+  <text x="610" y="165" text-anchor="middle" font-size="9" fill="#888">18 bit</text>
+  <text x="710" y="165" text-anchor="middle" font-size="9" fill="#888">16 bit USB</text>
+
+  <text x="380" y="185" text-anchor="middle" font-size="10" fill="#555" font-style="italic">Effective resolution increases with each decimation stage — consistent with sigma-delta theory</text>
+  <text x="380" y="200" text-anchor="middle" font-size="10" fill="#555" font-style="italic">Total decimation ratio: ≈47:1 &nbsp;|&nbsp; Final SNR: ~108 dB (18-bit equivalent)</text>
+</svg>
+<figcaption>Figure 7: The decimation chain from sigma-delta ADC output (36 MSPS) to final IQ output (768 kSps). Each CIC stage decimates while increasing effective resolution; the FIR stages shape the passband and reject aliases. The digital down-converter translates the low-IF to baseband before final output.</figcaption>
+</div>
+
+<h3>8.2 IQ Output: 2 × 16-Bit Architecture</h3>
+<p>The final output of the HF+ is an IQ (in-phase and quadrature) data stream. IQ representation separates the signal into two orthogonal components, enabling software-defined demodulation of any modulation type (AM, SSB, FM, digital modes, etc.) without the need for hardware demodulators.</p>
+
+<p>Although the effective resolution after decimation is 18 bits, the USB output is packaged as <strong>2 × 16-bit signed integers</strong> (one for I, one for Q). The upper 16 bits of the 18-bit data word are transmitted; the two LSBs are discarded. This truncation introduces approximately 6 dB of quantisation noise beyond the 18-bit ADC performance, reducing the effective output dynamic range to approximately 96 dB&mdash;still representing a 16-bit linear ADC at its theoretical maximum.</p>
+
+<p>The aggregate USB data rate is:</p>
+<div class="math">
+768,000 samples/sec × 2 channels (I/Q) × 2 bytes/channel = 3,072,000 bytes/sec ≈ 3.07 MB/s
+
+This fits comfortably within USB 2.0 full-speed bandwidth (12 Mbit/s ≈ 1.5 MB/s) using
+high-speed (480 Mbit/s) mode, requiring no compression or decimation below 768 kSps.
+</div>
+
+<h3>8.3 Alias-Free Bandwidth</h3>
+<p>At 768 kSps output sample rate, the theoretical Nyquist bandwidth is 384 kHz each side of centre, or 768 kHz total. However, the published alias-free bandwidth is only 600 kHz. The 168 kHz gap (84 kHz each side) is the transition band of the final anti-alias FIR filter, within which the filter's roll-off provides less than the full 108 dBc of alias suppression. Software applications should treat the outer 12% of the displayed bandwidth as potentially affected by filter roll-off.</p>
+</section>
+
+<!-- 9. PERFORMANCE -->
+<section id="performance">
+<h2>9. Overall Performance Analysis</h2>
+
+<h3>9.1 Key Measured Performance Figures</h3>
+<table>
+  <tr><th>Parameter</th><th>HF+</th><th>HF+ Discovery</th><th>Notes</th></tr>
+  <tr><td>MDS (500 Hz BW, 15 MHz)</td><td>-138 dBm</td><td>-140 dBm</td><td>Better in Discovery due to integrated preselector</td></tr>
+  <tr><td>MDS (500 Hz BW, FM band)</td><td>-140 dBm</td><td>-141.5 dBm</td><td></td></tr>
+  <tr><td>Blocking Dynamic Range (HF)</td><td>110 dB</td><td>110 dB</td><td>Best-in-class consumer SDR at launch</td></tr>
+  <tr><td>Blocking Dynamic Range (VHF)</td><td>95 dB</td><td>95 dB</td><td></td></tr>
+  <tr><td>IIP3 (max gain, HF)</td><td>+15 dBm</td><td>+15 dBm</td><td>Excellent for consumer device</td></tr>
+  <tr><td>System NF (HF, no preselector)</td><td>~2.0 dB</td><td>—</td><td>Without optional preselector</td></tr>
+  <tr><td>System NF (HF, with preselector)</td><td>~2.8 dB</td><td>~1.4 dB</td><td>Discovery integrates preselector optimally</td></tr>
+  <tr><td>Alias/image rejection</td><td>108 dBc</td><td>108 dBc</td><td></td></tr>
+  <tr><td>Alias-free bandwidth</td><td>600 kHz</td><td>600 kHz</td><td>At max 768 kSps output rate</td></tr>
+  <tr><td>Clock accuracy</td><td>0.5 ppm</td><td>0.5 ppm</td><td>Precision MEMS or TCXO oscillator</td></tr>
+  <tr><td>Frequency coverage</td><td>9 kHz–31 MHz, 60–260 MHz</td><td>Same</td><td></td></tr>
+</table>
+
+<h3>9.2 Dynamic Range in Context</h3>
+<div class="figure">
+<svg width="700" height="280" viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
+  <rect width="700" height="280" fill="#f8fafc" rx="8"/>
+
+  <text x="350" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">HF Blocking Dynamic Range: SDR Comparison</text>
+
+  <!-- Bar chart -->
+  <!-- Scale: 0 dB at x=100, 120 dB at x=640. 1dB = 4.5px -->
+  <!-- RTL-SDR: ~50 dB -->
+  <rect x="100" y="50" width="225" height="28" rx="3" fill="#e74c3c"/>
+  <text x="95" y="69" text-anchor="end" font-size="11" fill="#555">RTL-SDR (R820T)</text>
+  <text x="332" y="69" font-size="11" fill="white" font-weight="bold"> 50 dB</text>
+
+  <!-- SDRplay RSP1A: ~90 dB -->
+  <rect x="100" y="88" width="405" height="28" rx="3" fill="#e67e22"/>
+  <text x="95" y="107" text-anchor="end" font-size="11" fill="#555">SDRplay RSPdx</text>
+  <text x="512" y="107" font-size="11" fill="white" font-weight="bold"> 90 dB</text>
+
+  <!-- Perseus: ~100 dB -->
+  <rect x="100" y="126" width="450" height="28" rx="3" fill="#f39c12"/>
+  <text x="95" y="145" text-anchor="end" font-size="11" fill="#555">Microtelecom Perseus</text>
+  <text x="557" y="145" font-size="11" fill="white" font-weight="bold"> 100 dB</text>
+
+  <!-- AirSpy HF+: 110 dB -->
+  <rect x="100" y="164" width="495" height="28" rx="3" fill="#27ae60"/>
+  <text x="95" y="183" text-anchor="end" font-size="11" fill="#555">AirSpy HF+ / Discovery</text>
+  <text x="602" y="183" font-size="11" fill="white" font-weight="bold"> 110 dB</text>
+
+  <!-- Axis -->
+  <line x1="100" y1="205" x2="650" y2="205" stroke="#333" stroke-width="1.5"/>
+  <text x="100" y="220" text-anchor="middle" font-size="10" fill="#555">0 dB</text>
+  <text x="325" y="220" text-anchor="middle" font-size="10" fill="#555">50 dB</text>
+  <text x="550" y="220" text-anchor="middle" font-size="10" fill="#555">100 dB</text>
+  <text x="640" y="220" text-anchor="middle" font-size="10" fill="#555">120 dB</text>
+
+  <!-- Gridlines -->
+  <line x1="325" y1="40" x2="325" y2="205" stroke="#ddd" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="550" y1="40" x2="550" y2="205" stroke="#ddd" stroke-width="1" stroke-dasharray="4,4"/>
+
+  <text x="350" y="250" text-anchor="middle" font-size="10" fill="#555" font-style="italic">HF Blocking Dynamic Range (dB) — higher is better — approximate representative values</text>
+  <text x="350" y="265" text-anchor="middle" font-size="10" fill="#555" font-style="italic">All values at HF frequencies (approx. 10–15 MHz), 500 Hz noise bandwidth</text>
+</svg>
+<figcaption>Figure 8: Comparative blocking dynamic range at HF for representative SDR receivers. The AirSpy HF+ achieves 110 dB, a 20 dB advantage over the next tier of consumer SDR. Values are approximate and based on published third-party measurements.</figcaption>
+</div>
+
+<h3>9.3 Why This Architecture Achieves Exceptional HF Performance</h3>
+<p>The HF+'s performance advantage is not attributable to any single design choice but to a coherent system-level optimisation in which each stage is matched to the capabilities of adjacent stages:</p>
+
+<ol style="margin: 10px 0 14px 24px; line-height: 1.9;">
+  <li><strong>Low insertion-loss preselector → LNA NF dominates:</strong> The filter's loss is so low (≤3 dB) that the excellent LNA noise figure sets the system limit, not excess filter loss.</li>
+  <li><strong>High LNA gain → subsequent stages are irrelevant to NF:</strong> 20 dB gain makes all post-LNA NF contributions negligible, enabling less aggressive (and more linear) designs for the VGA and mixer.</li>
+  <li><strong>PHR mixer → no tracking filter needed:</strong> The polyphase structure provides harmonic rejection without the insertion loss and complexity of a tracking bandpass filter, maintaining the low-loss signal path while keeping the preselector simple.</li>
+  <li><strong>Low-IF architecture → no DC spur, no 1/f noise:</strong> The signal is never placed at DC in the analogue domain, avoiding the two most troublesome artefacts of direct-conversion designs.</li>
+  <li><strong>4th-order &Sigma;&Delta; ADC → extraordinary dynamic range in limited bandwidth:</strong> The ADC is perfectly matched to the application: wide dynamic range (110 dB) over a narrow bandwidth (600 kHz), which is exactly what HF monitoring requires.</li>
+  <li><strong>Adaptive IF offset → avoids ADC clock spurs:</strong> The firmware-controlled IF shift ensures the sigma-delta's internal switching artefacts can never fall on or near the signal of interest.</li>
+  <li><strong>Multi-stage cascaded AGC → dynamic optimisation:</strong> The three-loop AGC system continually adjusts gain distribution to keep the signal in the optimal range for all stages simultaneously.</li>
+</ol>
+</section>
+
+<!-- 10. IMPROVEMENTS -->
+<section id="improvements">
+<h2>10. Potential Improvements and Their Limitations</h2>
+<p>Given the exceptional performance of the HF+ design, improvements are necessarily incremental. The following areas represent the most significant opportunities:</p>
+
+<h3>10.1 Preselector Filter Enhancement</h3>
+<div class="improvement">More aggressive bandpass filters (7- or 9-pole designs) could improve adjacent-band rejection by 15&ndash;25 dB. However, each additional filter pole adds approximately 0.1&ndash;0.3 dB insertion loss and increases the filter's physical size. Given that the preselector's insertion loss already dominates the system noise figure, any increase here directly increases system NF. A hypothetical 7-pole filter adding 0.5 dB extra loss would increase system NF from 1.4 dB to 1.9 dB — a measurable degradation for a marginal improvement in adjacent-channel rejection in an already well-performing system.</div>
+
+<h3>10.2 External LNA Preamplifier</h3>
+<p>Adding an external LNA preamplifier before the HF+ reduces the noise figure further. Independent measurements show approximately 0.5&ndash;1 dB of improvement with a quality external preamp (e.g., a low-NF LNA with 15&ndash;20 dB gain). However, this comes at the cost of reduced large-signal handling: the preamp's gain brings strong signals up to the HF+'s AGC range earlier, potentially increasing susceptibility to intermodulation from broadcast stations.</p>
+
+<div class="note">The HF+ already achieves a noise figure of ~1.4 dB, which corresponds to a noise temperature of ~120 K. Below approximately 10 MHz, external noise (man-made interference, atmospheric noise, cosmic noise) dominates over receiver thermal noise even at this noise figure. Improving receiver NF below ~2 dB at HF yields diminishing real-world returns: the antenna is the limiting factor, not the receiver.</div>
+
+<h3>10.3 Passive Front-End Attenuator Path</h3>
+<p>As discussed in Section 4, a parallel passive attenuator path (switched in for very strong signals, bypassing the LNA entirely) would provide a lower-noise attenuation option for extreme strong-signal environments such as proximity to AM broadcast transmitters. The added hardware complexity (low-loss RF relay or high-linearity RF switch, 50&Omega; matched resistive pad network) and the negligible NF benefit (VGA noise contribution is already &lt;0.05 dB) make this a minor improvement for specialist use cases only.</p>
+
+<h3>10.4 Wider Output Bandwidth</h3>
+<p>The 600 kHz alias-free bandwidth limits the spectrum observable at any instant. Increasing this to 2&ndash;4 MHz would require either a higher-order decimation chain or a higher USB transfer rate. The STA709 can output at higher sample rates (up to the full 36 MSPS), but USB 2.0 bandwidth limits compressed IQ streaming, and host CPU processing requirements scale with bandwidth. A future design using USB 3.0 and a faster host interface could increase observable bandwidth to 2&ndash;4 MHz without fundamentally changing the sigma-delta ADC performance.</p>
+
+<h3>10.5 Reference Clock Improvement</h3>
+<p>The 0.5 ppm clock accuracy is excellent for most applications. A GPS-disciplined oscillator (GPSDO) reference or an oven-controlled crystal oscillator (OCXO) could improve this to 0.001 ppm or better for frequency-standard applications. This is an external improvement available to users without hardware modification, via reference clock injection if the hardware supports it.</p>
+</section>
+
+<!-- 11. CONCLUSION -->
+<section id="conclusion">
+<h2>11. Conclusion</h2>
+<p>The AirSpy HF+ and HF+ Discovery represent a coherent, systems-level engineering achievement in consumer SDR design. By selecting and combining an automotive-grade sigma-delta ADC IC (STMicroelectronics STA709) with a carefully designed preselector filter bank, a high-gain low-noise LNA (MiniCircuits PSA4-5043+), a sophisticated multi-stage AGC system, and a low-IF architecture with polyphase harmonic rejection mixing, the AirSpy design team achieved a blocking dynamic range of 110 dB on HF&mdash;a figure that was genuinely unprecedented in the consumer SDR market at launch and remains best-in-class for devices in this price tier.</p>
+
+<p>Each design trade-off is well-reasoned: the active VGA adds negligible noise after the LNA; the PHR mixer eliminates the need for a tracking filter while providing adequate harmonic rejection; the low-IF architecture cleanly avoids DC spur and 1/f noise problems; and the sigma-delta ADC provides extraordinary dynamic range in the precisely limited bandwidth appropriate for HF monitoring use cases.</p>
+
+<p>Potential improvements are real but minor: better preselector filters trade noise figure for selectivity; an external preamp offers marginal NF improvement below the atmospheric noise floor; a passive attenuator path benefits only the most extreme strong-signal environments. These are refinements to an already well-optimised system rather than fundamental architectural improvements.</p>
+
+<p>The HF+ stands as a demonstration that consumer-grade SDR performance can approach professional receiver standards through thoughtful exploitation of modern automotive-grade ICs, rigorous cascade noise analysis, and careful system-level co-design between the analogue front end, the ADC, and the digital signal processing chain.</p>
+
+<div class="note">All performance figures in this paper are based on published manufacturer specifications and independent third-party measurements. Internal design details not publicly disclosed (filter topology, specific IF value, AGC algorithm details) are estimated through engineering analysis and are labelled as hypotheses. The overall architectural description is consistent with published independent analysis and component identification.</div>
+</section>
+
+<!-- REFERENCES -->
+<section id="references" class="refs">
+<h2>References</h2>
+<ol>
+  <li>AirSpy. (2019). <em>AirSpy HF+ Specifications</em>. Retrieved from <a href="https://airspy.com/airspy-hf-plus/" target="_blank">airspy.com/airspy-hf-plus</a></li>
+  <li>AirSpy. (2019). <em>AirSpy HF+ Discovery Product Page</em>. Retrieved from <a href="https://airspy.com/airspy-hf-discovery/" target="_blank">airspy.com/airspy-hf-discovery</a></li>
+  <li>World Radio TV Handbook. (2019). <em>AirSpy HF+ Features Review</em>. WRTH 2019. Retrieved from <a href="https://airspy.com/downloads/WRTH2019Features_AirspyHF+_review.pdf" target="_blank">airspy.com (PDF)</a></li>
+  <li>World Radio TV Handbook. (2020). <em>AirSpy HF+ Discovery Features Review</em>. WRTH 2020. Retrieved from <a href="https://airspy.com/downloads/WRTH2020Features_Airspy_Discovery_review.pdf" target="_blank">airspy.com (PDF)</a></li>
+  <li>Noonan, D. (2019). <em>A Heavyweight at 30g: The Airspy HF+ Discovery</em>. RadioUser, October 2019. Retrieved from <a href="https://airspy.com/downloads/RadioUser_Oct2019.pdf" target="_blank">airspy.com (PDF)</a></li>
+  <li>RTL-SDR Blog. (2017). <em>Our Review of the Airspy HF+ Compared Against Various SDRs</em>. Retrieved from <a href="https://www.rtl-sdr.com/our-review-of-the-airspy-hf-compared-against-colibrinano-airspy-mini-rsp2-rtl-sdr/" target="_blank">rtl-sdr.com</a></li>
+  <li>RTL-SDR Blog. (2018). <em>Airspy HF+ Official Specifications Released</em>. Retrieved from <a href="https://www.rtl-sdr.com/airspy-hf-official-specifications-released/" target="_blank">rtl-sdr.com</a></li>
+  <li>RTL-SDR Blog. (2019). <em>Testing the New Airspy HF+ Preselector</em>. Retrieved from <a href="https://www.rtl-sdr.com/testing-out-the-new-airspy-hf-preselector/" target="_blank">rtl-sdr.com</a></li>
+  <li>STMicroelectronics. (2018). <em>STA709 — Automotive AM/FM/DAB Digital Tuner IC Datasheet</em>. Retrieved from <a href="https://www.st.com/en/automotive-infotainment-and-telematics/sta709.html" target="_blank">st.com</a></li>
+  <li>MiniCircuits. (2020). <em>PSA4-5043+ MMIC Amplifier Datasheet</em>. Retrieved from <a href="https://www.minicircuits.com/pdfs/PSA4-5043+.pdf" target="_blank">minicircuits.com</a></li>
+  <li>VK4ZXI. (2018). <em>Polyphase Harmonic Rejection Mixer Analysis</em>. Amateur Radio Technical Blog. Retrieved from <a href="http://vk4zxi.blogspot.com/2018/01/polyphase-harmonic-rejection-mixer.html" target="_blank">vk4zxi.blogspot.com</a></li>
+  <li>Schrevens, P. (PA3FWM). <em>The Polyphase Mixer</em>. Technical Notes. Retrieved from <a href="https://pa3fwm.nl/technotes/tn17c.html" target="_blank">pa3fwm.nl</a></li>
+  <li>Proakis, J.G., &amp; Manolakis, D.G. (2006). <em>Digital Signal Processing: Principles, Algorithms, and Applications</em>, 4th ed. Prentice Hall. [Sigma-delta and decimation theory]</li>
+  <li>Schreier, R., &amp; Temes, G.C. (2005). <em>Understanding Delta-Sigma Data Converters</em>. IEEE Press / Wiley. [Noise shaping, ENOB, dynamic range]</li>
+  <li>Razavi, B. (2011). <em>RF Microelectronics</em>, 2nd ed. Prentice Hall. [LNA design, mixer theory, Friis cascade NF]</li>
+  <li>Williams, A. (AB9IL). <em>Airspy HF+ Sensitivity Factors</em>. Retrieved from <a href="https://www.ab9il.net/software-defined-radio/AirspyHFplusSensitivityFactors.html" target="_blank">ab9il.net</a></li>
+  <li>Pappenfus, E.W., Bruene, W.B., &amp; Schoenike, E.O. (1964). <em>Single Sideband Principles and Circuits</em>. McGraw-Hill. [Classical HF receiver design reference]</li>
+  <li>FMDX.pl. (2019). <em>Review: Airspy HF+</em>. Retrieved from <a href="https://fmdx.pl/2019/01/review-airspy-hf/" target="_blank">fmdx.pl</a></li>
+  <li>Airspy GitHub Repository. <em>airspy/airspyhf</em>. Retrieved from <a href="https://github.com/airspy/airspyhf" target="_blank">github.com/airspy/airspyhf</a></li>
+  <li>Airspy Groups.io. (2020). <em>AGC Architecture Discussion</em>. SDR-Radio Group. Retrieved from <a href="https://sdr-radio.groups.io/g/main/topic/agc_in_airspy_hf/69965381" target="_blank">sdr-radio.groups.io</a></li>
+</ol>
+</section>
+
+</main>
+
+<footer style="background:#1a1a1a;color:#aaa;text-align:center;padding:24px;font-family:sans-serif;font-size:0.85rem;">
+  AirSpy HF+ Technical Analysis &mdash; April 2026 &mdash; Prepared for educational and technical reference purposes.<br>
+  All trademarks are property of their respective owners. Performance figures from published third-party measurements.
+</footer>
+
+</body>
+</html>
